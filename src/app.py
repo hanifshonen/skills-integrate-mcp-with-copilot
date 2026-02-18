@@ -5,11 +5,15 @@ A super simple FastAPI application that allows students to view and sign up
 for extracurricular activities at Mergington High School.
 """
 
-from fastapi import FastAPI, HTTPException
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
 import os
+from datetime import datetime
 from pathlib import Path
+from typing import Optional
+
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 app = FastAPI(title="Mergington High School API",
               description="API for viewing and signing up for extracurricular activities")
@@ -77,6 +81,24 @@ activities = {
     }
 }
 
+# In-memory todos database
+todos = []
+todo_id_counter = 1
+
+
+class TodoCreate(BaseModel):
+    title: str
+    description: Optional[str] = ""
+    due_date: Optional[str] = None
+    student_email: str
+
+
+class TodoUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    due_date: Optional[str] = None
+    completed: Optional[bool] = None
+
 
 @app.get("/")
 def root():
@@ -130,3 +152,56 @@ def unregister_from_activity(activity_name: str, email: str):
     # Remove student
     activity["participants"].remove(email)
     return {"message": f"Unregistered {email} from {activity_name}"}
+
+
+@app.get("/todos")
+def get_todos(email: Optional[str] = None):
+    """Get all todos, optionally filtered by student email"""
+    if email:
+        return [todo for todo in todos if todo["student_email"] == email]
+    return todos
+
+
+@app.post("/todos")
+def create_todo(todo: TodoCreate):
+    """Create a new todo"""
+    global todo_id_counter
+    new_todo = {
+        "id": todo_id_counter,
+        "title": todo.title,
+        "description": todo.description,
+        "due_date": todo.due_date,
+        "student_email": todo.student_email,
+        "completed": False,
+        "created_at": datetime.now().isoformat()
+    }
+    todos.append(new_todo)
+    todo_id_counter += 1
+    return new_todo
+
+
+@app.put("/todos/{todo_id}")
+def update_todo(todo_id: int, todo_update: TodoUpdate):
+    """Update a todo"""
+    for todo in todos:
+        if todo["id"] == todo_id:
+            if todo_update.title is not None:
+                todo["title"] = todo_update.title
+            if todo_update.description is not None:
+                todo["description"] = todo_update.description
+            if todo_update.due_date is not None:
+                todo["due_date"] = todo_update.due_date
+            if todo_update.completed is not None:
+                todo["completed"] = todo_update.completed
+            return todo
+    raise HTTPException(status_code=404, detail="Todo not found")
+
+
+@app.delete("/todos/{todo_id}")
+def delete_todo(todo_id: int):
+    """Delete a todo"""
+    for i, todo in enumerate(todos):
+        if todo["id"] == todo_id:
+            todos.pop(i)
+            return {"message": "Todo deleted successfully"}
+    raise HTTPException(status_code=404, detail="Todo not found")
