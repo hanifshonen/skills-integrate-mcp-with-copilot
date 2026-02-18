@@ -182,24 +182,60 @@ document.addEventListener("DOMContentLoaded", () => {
         const todoCard = document.createElement("div");
         todoCard.className = `todo-card ${todo.completed ? "completed" : ""}`;
 
-        const dueDateHtml = todo.due_date
-          ? `<p><strong>Due:</strong> ${new Date(todo.due_date).toLocaleDateString()}</p>`
-          : "";
+        // Create content div
+        const contentDiv = document.createElement("div");
+        contentDiv.className = "todo-content";
 
-        todoCard.innerHTML = `
-          <div class="todo-content">
-            <h4>${todo.title}</h4>
-            ${todo.description ? `<p>${todo.description}</p>` : ""}
-            ${dueDateHtml}
-          </div>
-          <div class="todo-actions">
-            <button class="toggle-btn" data-id="${todo.id}" data-completed="${todo.completed}">
-              ${todo.completed ? "Mark Incomplete" : "Mark Complete"}
-            </button>
-            <button class="delete-todo-btn" data-id="${todo.id}">Delete</button>
-          </div>
-        `;
+        // Create and append title
+        const title = document.createElement("h4");
+        title.textContent = todo.title;
+        contentDiv.appendChild(title);
 
+        // Create and append description if exists
+        if (todo.description) {
+          const description = document.createElement("p");
+          description.textContent = todo.description;
+          contentDiv.appendChild(description);
+        }
+
+        // Create and append due date if exists
+        if (todo.due_date) {
+          const dueDate = document.createElement("p");
+          const strong = document.createElement("strong");
+          strong.textContent = "Due: ";
+          dueDate.appendChild(strong);
+          dueDate.appendChild(
+            document.createTextNode(
+              new Date(todo.due_date).toLocaleDateString("en-US")
+            )
+          );
+          contentDiv.appendChild(dueDate);
+        }
+
+        // Create actions div
+        const actionsDiv = document.createElement("div");
+        actionsDiv.className = "todo-actions";
+
+        // Create toggle button
+        const toggleBtn = document.createElement("button");
+        toggleBtn.className = "toggle-btn";
+        toggleBtn.setAttribute("data-id", todo.id);
+        toggleBtn.setAttribute("data-completed", todo.completed);
+        toggleBtn.textContent = todo.completed
+          ? "Mark Incomplete"
+          : "Mark Complete";
+        actionsDiv.appendChild(toggleBtn);
+
+        // Create delete button
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "delete-todo-btn";
+        deleteBtn.setAttribute("data-id", todo.id);
+        deleteBtn.textContent = "Delete";
+        actionsDiv.appendChild(deleteBtn);
+
+        // Append both divs to card
+        todoCard.appendChild(contentDiv);
+        todoCard.appendChild(actionsDiv);
         todosList.appendChild(todoCard);
       });
 
