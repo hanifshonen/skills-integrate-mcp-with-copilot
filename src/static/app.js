@@ -30,19 +30,39 @@ document.addEventListener("DOMContentLoaded", () => {
         const todoItem = document.createElement("div");
         todoItem.className = `todo-item ${todo.completed ? "completed" : ""}`;
 
-        todoItem.innerHTML = `
-          <div class="todo-content">
-            <input type="checkbox" class="todo-checkbox" data-id="${todo.id}" ${
-          todo.completed ? "checked" : ""
-        } />
-            <div class="todo-text">
-              <h5>${todo.title}</h5>
-              ${todo.description ? `<p>${todo.description}</p>` : ""}
-            </div>
-          </div>
-          <button class="delete-todo-btn" data-id="${todo.id}">❌</button>
-        `;
+        // Create elements safely to prevent XSS
+        const todoContent = document.createElement("div");
+        todoContent.className = "todo-content";
 
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.className = "todo-checkbox";
+        checkbox.setAttribute("data-id", todo.id);
+        checkbox.checked = todo.completed;
+
+        const todoText = document.createElement("div");
+        todoText.className = "todo-text";
+
+        const title = document.createElement("h5");
+        title.textContent = todo.title;
+        todoText.appendChild(title);
+
+        if (todo.description) {
+          const description = document.createElement("p");
+          description.textContent = todo.description;
+          todoText.appendChild(description);
+        }
+
+        todoContent.appendChild(checkbox);
+        todoContent.appendChild(todoText);
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "delete-todo-btn";
+        deleteBtn.setAttribute("data-id", todo.id);
+        deleteBtn.textContent = "❌";
+
+        todoItem.appendChild(todoContent);
+        todoItem.appendChild(deleteBtn);
         todosList.appendChild(todoItem);
       });
 
