@@ -3,6 +3,204 @@ document.addEventListener("DOMContentLoaded", () => {
   const activitySelect = document.getElementById("activity");
   const signupForm = document.getElementById("signup-form");
   const messageDiv = document.getElementById("message");
+  
+  // ToDo elements
+  const todosList = document.getElementById("todos-list");
+  const todoForm = document.getElementById("todo-form");
+  const todoMessageDiv = document.getElementById("todo-message");
+
+  // Function to fetch todos from API
+  async function fetchTodos() {
+    try {
+      const response = await fetch("/todos");
+      const todos = await response.json();
+
+      // Clear loading message
+      todosList.innerHTML = "";
+
+      // Check if there are any todos
+      const todoArray = Object.values(todos);
+      if (todoArray.length === 0) {
+        todosList.innerHTML = "<p><em>No tasks yet. Add one above!</em></p>";
+        return;
+      }
+
+      // Create todo items
+      todoArray.forEach((todo) => {
+        const todoItem = document.createElement("div");
+        todoItem.className = `todo-item ${todo.completed ? "completed" : ""}`;
+
+        // Create elements safely to prevent XSS
+        const todoContent = document.createElement("div");
+        todoContent.className = "todo-content";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.className = "todo-checkbox";
+        checkbox.setAttribute("data-id", todo.id);
+        checkbox.checked = todo.completed;
+
+        const todoText = document.createElement("div");
+        todoText.className = "todo-text";
+
+        const title = document.createElement("h5");
+        title.textContent = todo.title;
+        todoText.appendChild(title);
+
+        if (todo.description) {
+          const description = document.createElement("p");
+          description.textContent = todo.description;
+          todoText.appendChild(description);
+        }
+
+        todoContent.appendChild(checkbox);
+        todoContent.appendChild(todoText);
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "delete-todo-btn";
+        deleteBtn.setAttribute("data-id", todo.id);
+        deleteBtn.textContent = "❌";
+
+        todoItem.appendChild(todoContent);
+        todoItem.appendChild(deleteBtn);
+        todosList.appendChild(todoItem);
+      });
+
+      // Add event listeners to checkboxes
+      document.querySelectorAll(".todo-checkbox").forEach((checkbox) => {
+        checkbox.addEventListener("change", handleToggleTodo);
+      });
+
+      // Add event listeners to delete buttons
+      document.querySelectorAll(".delete-todo-btn").forEach((button) => {
+        button.addEventListener("click", handleDeleteTodo);
+      });
+    } catch (error) {
+      todosList.innerHTML =
+        "<p>Failed to load todos. Please try again later.</p>";
+      console.error("Error fetching todos:", error);
+    }
+  }
+
+  // Handle todo form submission
+  todoForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const title = document.getElementById("todo-title").value;
+    const description = document.getElementById("todo-description").value;
+
+    try {
+      const response = await fetch("/todos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: title,
+          description: description,
+          completed: false,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        todoMessageDiv.textContent = "Task added successfully!";
+        todoMessageDiv.className = "success";
+        todoForm.reset();
+
+        // Refresh todos list
+        fetchTodos();
+      } else {
+        todoMessageDiv.textContent = result.detail || "An error occurred";
+        todoMessageDiv.className = "error";
+      }
+
+      todoMessageDiv.classList.remove("hidden");
+
+      // Hide message after 3 seconds
+      setTimeout(() => {
+        todoMessageDiv.classList.add("hidden");
+      }, 3000);
+    } catch (error) {
+      todoMessageDiv.textContent = "Failed to add task. Please try again.";
+      todoMessageDiv.className = "error";
+      todoMessageDiv.classList.remove("hidden");
+      console.error("Error adding todo:", error);
+    }
+  });
+
+  // Handle toggle todo
+  async function handleToggleTodo(event) {
+    const checkbox = event.target;
+    const todoId = checkbox.getAttribute("data-id");
+    const completed = checkbox.checked;
+
+    try {
+      const response = await fetch(`/todos/${todoId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          completed: completed,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        // Refresh todos list to update UI
+        fetchTodos();
+      } else {
+        todoMessageDiv.textContent = result.detail || "An error occurred";
+        todoMessageDiv.className = "error";
+        todoMessageDiv.classList.remove("hidden");
+      }
+    } catch (error) {
+      todoMessageDiv.textContent = "Failed to update task. Please try again.";
+      todoMessageDiv.className = "error";
+      todoMessageDiv.classList.remove("hidden");
+      console.error("Error updating todo:", error);
+    }
+  }
+
+  // Handle delete todo
+  async function handleDeleteTodo(event) {
+    const button = event.target;
+    const todoId = button.getAttribute("data-id");
+
+    try {
+      const response = await fetch(`/todos/${todoId}`, {
+        method: "DELETE",
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        todoMessageDiv.textContent = result.message;
+        todoMessageDiv.className = "success";
+
+        // Refresh todos list
+        fetchTodos();
+      } else {
+        todoMessageDiv.textContent = result.detail || "An error occurred";
+        todoMessageDiv.className = "error";
+      }
+
+      todoMessageDiv.classList.remove("hidden");
+
+      // Hide message after 3 seconds
+      setTimeout(() => {
+        todoMessageDiv.classList.add("hidden");
+      }, 3000);
+    } catch (error) {
+      todoMessageDiv.textContent = "Failed to delete task. Please try again.";
+      todoMessageDiv.className = "error";
+      todoMessageDiv.classList.remove("hidden");
+      console.error("Error deleting todo:", error);
+    }
+  }
 
   // Function to fetch activities from API
   async function fetchActivities() {
@@ -156,5 +354,6 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Initialize app
+  fetchTodos();
   fetchActivities();
 });
